@@ -982,11 +982,11 @@ namespace History
 			breakableBottom[410] = true;
 			breakableBottom[413] = true;
 			breakableBottom[414] = true;
-			breakableBottom[419] = true;
-			breakableBottom[425] = true;
-			breakableBottom[441] = true;
-			breakableBottom[442] = true;
-			breakableBottom[443] = true;
+			//breakableBottom[419] = true;
+			//breakableBottom[425] = true;
+			//breakableBottom[441] = true;
+			//breakableBottom[442] = true;
+			//breakableBottom[443] = true;
 
 			breakableTop[10] = true;
 			breakableTop[11] = true;
@@ -1004,8 +1004,8 @@ namespace History
 			breakableTop[388] = true;
 			breakableTop[389] = true;
 			breakableTop[395] = true;
-			breakableTop[425] = true;
-			breakableTop[443] = true;
+			//breakableTop[425] = true;
+			//breakableTop[443] = true;
 
 			breakableSides[4] = true;
 			breakableSides[55] = true;
@@ -1016,7 +1016,7 @@ namespace History
 			breakableSides[386] = true;
 			breakableSides[387] = true;
 			breakableSides[395] = true;
-			breakableSides[425] = true;
+			//breakableSides[425] = true;
 
 			breakableWall[4] = true;
 			breakableWall[132] = true;
@@ -1029,7 +1029,7 @@ namespace History
 			breakableWall[334] = true;
 			breakableWall[380] = true;
 			breakableWall[395] = true;
-			breakableWall[440] = true;
+			//breakableWall[440] = true;
 		}
 		void logEdit(byte etype, ITile tile, int X, int Y, ushort type, string account, List<Vector2> done, byte style = 0, int alt = 0, int random = -1, bool direction = false)
 		{
@@ -1642,27 +1642,28 @@ namespace History
 			TShockAPI.Commands.ChatCommands.Add(new Command("history.rollback", Rollback, "roolback", "desfazer"));
 			TShockAPI.Commands.ChatCommands.Add(new Command("history.rollback", Undo, "rundo", "refazer"));
 
-			switch (TShock.Config.StorageType.ToLower())
-			{
-				case "mysql":
-					string[] host = TShock.Config.MySqlHost.Split(':');
-					Database = new MySqlConnection()
-					{
-						ConnectionString = string.Format("Server={0}; Port={1}; Database={2}; Uid={3}; Pwd={4};",
-							host[0],
-							host.Length == 1 ? "3306" : host[1],
-							TShock.Config.MySqlDbName,
-							TShock.Config.MySqlUsername,
-							TShock.Config.MySqlPassword)
-					};
-					break;
-				case "sqlite":
+			//switch (TShock.Config.StorageType.ToLower())
+			//{
+				//case "mysql":
+				//	string[] host = TShock.Config.MySqlHost.Split(':');
+				//	Database = new MySqlConnection()
+				//	{
+				//		ConnectionString = string.Format("Server={0}; Port={1}; Database={2}; Uid={3}; Pwd={4};",
+				//			host[0],
+				//			host.Length == 1 ? "3306" : host[1],
+				//			TShock.Config.MySqlDbName,
+				//			TShock.Config.MySqlUsername,
+				//			TShock.Config.MySqlPassword)
+				//	};
+				//	break;
+				//case "sqlite":
 					string sql = Path.Combine(TShock.SavePath, "history.sqlite");
 					Database = new SqliteConnection(string.Format("uri=file://{0},Version=3", sql));
-					break;
-			}
+					//break;
+			//}
 			SqlTableCreator sqlcreator = new SqlTableCreator(Database,
-				Database.GetSqlType() == SqlType.Sqlite ? (IQueryBuilder)new SqliteQueryCreator() : new MysqlQueryCreator());
+				/*Database.GetSqlType() == SqlType.Sqlite ? */(IQueryBuilder)new SqliteQueryCreator()/* : new MysqlQueryCreator()*/);
+			
 			sqlcreator.EnsureTableStructure(new SqlTable("History",
 				new SqlColumn("Time", MySqlDbType.Int32),
 				new SqlColumn("Account", MySqlDbType.VarChar) { Length = 50 },

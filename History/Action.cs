@@ -180,7 +180,15 @@ namespace History
 					}
 					else if (data == 5)//tree, grow another?
 					{
-						WorldGen.GrowTree(x, y + 1);
+						for (int i = x - 1; i < x + 2; i++)
+						{
+							Main.tile[i, y].active(true);
+							Main.tile[i, y].type = 2;
+							Main.tile[i, y].wall = 0;
+						}
+						Main.tile[x, y - 1].wall = 0;
+						WorldGen.GrowTree(x, y);
+						//WorldGen.GrowTree(x, y + 1);
 						break;
 					}
 					else if (data == 2 || data == 23 || data == 60 || data == 70 || data == 109 || data == 199)// grasses need to place manually, not from placeTile
