@@ -3,6 +3,7 @@ using System.Text;
 using Terraria;
 using Terraria.DataStructures;
 using Terraria.GameContent.Tile_Entities;
+using Terraria.Localization;
 using TShockAPI;
 
 namespace History
@@ -36,7 +37,7 @@ namespace History
 					}
 					break;
 				case 1://add tile
-					//Don't place if already there
+					   //Don't place if already there
 					if (Main.tile[x, y].active() && Main.tile[x, y].type == data)
 						break;
 					WorldGen.PlaceTile(x, y, data, false, true, style: style);
@@ -127,32 +128,32 @@ namespace History
 					//Uh wtf does "frame track" mean
 					//Too lazy to find atm
 					break;
-				case 16:
-					if (!Main.tile[x, y].wire4())
-					{
-						WorldGen.PlaceWire4(x, y);
-						TSPlayer.All.SendTileSquare(x, y, 1);
-					}
-					break;
-				case 17:
-					if (Main.tile[x, y].wire4())
-					{
-						WorldGen.KillWire4(x, y);
-						TSPlayer.All.SendTileSquare(x, y, 1);
-					}
-					break;
+				//case 16:
+				//	if (!Main.tile[x, y].wire4())
+				//	{
+				//		WorldGen.PlaceWire4(x, y);
+				//		TSPlayer.All.SendTileSquare(x, y, 1);
+				//	}
+				//	break;
+				//case 17:
+				//	if (Main.tile[x, y].wire4())
+				//	{
+				//		WorldGen.KillWire4(x, y);
+				//		TSPlayer.All.SendTileSquare(x, y, 1);
+				//	}
+				//	break;
 				case 25://paint tile
 					if (Main.tile[x, y].active())
 					{
 						Main.tile[x, y].color((byte)data);
-						NetMessage.SendData(63, -1, -1, "", x, y, data, 0f, 0);
+						NetMessage.SendData(63, -1, -1, NetworkText.Empty, x, y, data, 0f, 0);
 					}
 					break;
 				case 26://paint wall
 					if (Main.tile[x, y].wall > 0)
 					{
 						Main.tile[x, y].wallColor((byte)data);
-						NetMessage.SendData(64, -1, -1, "", x, y, data, 0f, 0);
+						NetMessage.SendData(64, -1, -1, NetworkText.Empty, x, y, data, 0f, 0);
 					}
 					break;
 				case 27://update sign
@@ -165,6 +166,7 @@ namespace History
 			{
 				case 0:
 				case 4://del tile
+				case 20://trykilltile 
 					if (Main.tileSand[data])//sand falling compensation (need to check up for top of sand)
 					{
 						int newY = y;
@@ -286,7 +288,7 @@ namespace History
 					if (delete)
 					{
 						WorldGen.KillTile(x, y, false, false, true);
-						NetMessage.SendData(17, -1, -1, "", 0, x, y);
+						NetMessage.SendData(17, -1, -1, NetworkText.Empty, 0, x, y);
 					}
 					break;
 				case 2://del wall
@@ -370,19 +372,38 @@ namespace History
 					TSPlayer.All.SendTileSquare(x, y, 1);
 					break;
 				case 15: //frame track
-					//see above
+						 //see above
 					break;
-				case 16:
-					if (Main.tile[x, y].wire4())
+				//case 16:
+				//	if (Main.tile[x, y].wire4())
+				//	{
+				//		WorldGen.KillWire4(x, y);
+				//		TSPlayer.All.SendTileSquare(x, y, 1);
+				//	}
+				//	break;
+				//case 17:
+				//	if (!Main.tile[x, y].wire4())
+				//	{
+				//		WorldGen.PlaceWire4(x, y);
+				//		TSPlayer.All.SendTileSquare(x, y, 1);
+				//	}
+				//	break;
+				case 21:
+					if (Main.tile[x, y].active())
 					{
-						WorldGen.KillWire4(x, y);
+						int prevTile = data & 0xFFFF;
+						int placedTile = (data >> 16) & 0xFFFF;
+
+						WorldGen.PlaceTile(x, y, prevTile, false, true, -1, style: style);
 						TSPlayer.All.SendTileSquare(x, y, 1);
 					}
 					break;
-				case 17:
-					if (!Main.tile[x, y].wire4())
+				case 22:
+					int prevWall = data & 0xFFFF;
+					int placedWall = (data >> 16) & 0xFFFF;
+					if (Main.tile[x, y].wall != prevWall) //change if not what was replaced
 					{
-						WorldGen.PlaceWire4(x, y);
+						Main.tile[x, y].wall = (byte)prevWall;
 						TSPlayer.All.SendTileSquare(x, y, 1);
 					}
 					break;
@@ -390,14 +411,14 @@ namespace History
 					if (Main.tile[x, y].active())
 					{
 						Main.tile[x, y].color((byte)paint);
-						NetMessage.SendData(63, -1, -1, "", x, y, paint, 0f, 0);
+						NetMessage.SendData(63, -1, -1, NetworkText.Empty, x, y, paint, 0f, 0);
 					}
 					break;
 				case 26://paint wall
 					if (Main.tile[x, y].wall > 0)
 					{
 						Main.tile[x, y].wallColor((byte)paint);
-						NetMessage.SendData(64, -1, -1, "", x, y, paint, 0f, 0);
+						NetMessage.SendData(64, -1, -1, NetworkText.Empty, x, y, paint, 0f, 0);
 					}
 					break;
 				case 27://updatesign
@@ -439,35 +460,35 @@ namespace History
 			{
 				case 0:
 				case 4:
-					return string.Format("{0} {1} broke tile {2}. ({3})", date, account, data, dhms);
+					return string.Format("{0} {1} removeu o bloco {2}. ({3})", date, account, data, dhms);
 				case 1:
-					return string.Format("{0} {1} placed tile {2}. ({3})", date, account, data, dhms);
+					return string.Format("{0} {1} colocou o bloco {2}. ({3})", date, account, data, dhms);
 				case 2:
-					return string.Format("{0} {1} broke wall {2}. ({3})", date, account, data, dhms);
+					return string.Format("{0} {1} removeu a parede {2}. ({3})", date, account, data, dhms);
 				case 3:
-					return string.Format("{0} {1} placed wall {2}. ({3})", date, account, data, dhms);
+					return string.Format("{0} {1} colocou a parede {2}. ({3})", date, account, data, dhms);
 				case 5:
 				case 10:
 				case 12:
 				case 16:
-					return string.Format("{0} {1} placed wire. ({2})", date, account, dhms);
+					return string.Format("{0} {1} colocou o fio. ({2})", date, account, dhms);
 				case 6:
 				case 11:
 				case 13:
 				case 17:
-					return string.Format("{0} {1} broke wire. ({2})", date, account, dhms);
+					return string.Format("{0} {1} removeu o fio. ({2})", date, account, dhms);
 				case 7:
 				case 14:
-					return string.Format("{0} {1} slope/pound tile. ({2})", date, account, dhms);
+					return string.Format("{0} {1} alterou a inclinação do bloco. ({2})", date, account, dhms);
 				case 8:
-					return string.Format("{0} {1} placed actuator. ({2})", date, account, dhms);
+					return string.Format("{0} {1} colocou atuador. ({2})", date, account, dhms);
 				case 9:
-					return string.Format("{0} {1} broke actuator. ({2})", date, account, dhms);
+					return string.Format("{0} {1} removeu atuador. ({2})", date, account, dhms);
 				case 25:
 				case 26:
-					return string.Format("{0} {1} painted tile/wall. ({2})", date, account, dhms);
+					return string.Format("{0} {1} pintou o/a bloco/parede. ({2})", date, account, dhms);
 				case 27:
-					return string.Format("{0} {1} changed sign text. ({2})", date, account, dhms);
+					return string.Format("{0} {1} alterou o texto da placa. ({2})", date, account, dhms);
 				default:
 					return "";
 			}

@@ -18,10 +18,12 @@ using Terraria.GameContent.Tile_Entities;
 using TerrariaApi.Server;
 using TShockAPI;
 using TShockAPI.DB;
+using Microsoft.Xna.Framework;
+using OTAPI.Tile;
 
 namespace History
 {
-	[ApiVersion(1, 23)]
+	[ApiVersion(2, 1)]
 	public class History : TerrariaPlugin
 	{
 		public static List<Action> Actions = new List<Action>(SaveCount);
@@ -95,9 +97,9 @@ namespace History
 					break;
 				case 13: //bottle
 				case 36: //present
-				//case 49: //water candle Removing - No different styles?
+						 //case 49: //water candle Removing - No different styles?
 				case 174: //platinum candle
-				//case 78: //clay pot
+						  //case 78: //clay pot
 				case 82: //herb
 				case 83: //herb
 				case 84: //herb
@@ -684,7 +686,7 @@ namespace History
 			return dim;
 		}
 		//This finds the 0,0 of a furniture
-		static Vector2 adjustDest(ref Vector2 dest, Tile tile, int which, int div, byte style)
+		static Vector2 adjustDest(ref Vector2 dest, ITile tile, int which, int div, byte style)
 		{
 			Vector2 relative = new Vector2(0, 0);
 			if (dest.X < 0)
@@ -780,7 +782,7 @@ namespace History
 		{
 			int which = 10; // An invalid which, to skip cases if it never changes.
 			int div = 1;
-			Tile tile = Main.tile[x, y];
+			ITile tile = Main.tile[x, y];
 			getPlaceData(tile.type, ref which, ref div);
 			switch (which)
 			{
@@ -1029,12 +1031,13 @@ namespace History
 			breakableWall[395] = true;
 			breakableWall[440] = true;
 		}
-		void logEdit(byte etype, Tile tile, int X, int Y, ushort type, string account, List<Vector2> done, byte style = 0, int alt = 0, int random = -1, bool direction = false)
+		void logEdit(byte etype, ITile tile, int X, int Y, ushort type, string account, List<Vector2> done, byte style = 0, int alt = 0, int random = -1, bool direction = false)
 		{
 			switch (etype)
 			{
 				case 0: //killtile
 				case 4: //killtilenoitem
+				case 20: //trykilltile
 					ushort tileType = Main.tile[X, Y].type;
 					byte pStyle = 0;
 					if (Main.tile[X, Y].active() && !Main.tileCut[tileType] && tileType != 127)
@@ -1139,7 +1142,7 @@ namespace History
 									}
 								return;
 							case 334: //Weapon Racks
-								//X and Y are already normalized to the center, Center is item prefix, X-1 is NetID
+									  //X and Y are already normalized to the center, Center is item prefix, X-1 is NetID
 								short prefix = (short)(Main.tile[X, Y].frameX % 5000);
 								int netID = (Main.tile[X - 1, Y].frameX % 5000) - 100;
 								if (netID < 0) break;
@@ -1282,17 +1285,37 @@ namespace History
 				case 15:
 					Queue(account, X, Y, 15);
 					break;
-				case 16:
-					if (!Main.tile[X, Y].wire4())
+				//case 16:
+				//	if (!Main.tile[X, Y].wire4())
+				//	{
+				//		Queue(account, X, Y, 16);
+				//	}
+				//	break;
+				//case 17:
+				//	if (Main.tile[X, Y].wire4())
+				//	{
+				//		Queue(account, X, Y, 17);
+				//	}
+				//	break;
+				case 19: //Acutate
+
+					break;
+				case 21: //ReplaceTile
+					if (Main.tile[X, Y].active())
 					{
-						Queue(account, X, Y, 16);
+						int combinedInt = Main.tile[X, Y].type | (type << 16);
+						Queue(account, X, Y, 21, (ushort)combinedInt, style);
 					}
 					break;
-				case 17:
-					if (Main.tile[X, Y].wire4())
+				case 22: //ReplaceWall
+					if (Main.tile[X, Y].wall > 0)
 					{
-						Queue(account, X, Y, 17);
+						int combinedInt = Main.tile[X, Y].wall | (type << 16);
+						Queue(account, X, Y, 22, (ushort)combinedInt);
 					}
+					break;
+				case 23: //SlopePoundTile
+
 					break;
 			}
 		}
@@ -1324,8 +1347,8 @@ namespace History
 							{
 								if (Main.tile[X, Y].type == 21 || Main.tile[X, Y].type == 88)
 									return; //Chests and dressers handled separately
-								//else if (Main.tile[X, Y].type == 2699)
-								//TSPlayer.All.SendInfoMessage("Weapon rack place");
+											//else if (Main.tile[X, Y].type == 2699)
+											//TSPlayer.All.SendInfoMessage("Weapon rack place");
 							}
 							//DEBUG
 							//TSPlayer.All.SendInfoMessage($"Type: {type}");
@@ -1385,7 +1408,7 @@ namespace History
 						}
 						break;
 					//chest delete
-					case PacketTypes.TileKill:
+					case PacketTypes.PlaceChest:
 						{
 							byte flag = e.Msg.readBuffer[e.Index];
 							int X = BitConverter.ToInt16(e.Msg.readBuffer, e.Index + 1);
@@ -1491,48 +1514,48 @@ namespace History
 							Queue(logName, X, Y, 27, data: signI, text: Main.sign[signI].text);
 						}
 						break;
-					case PacketTypes.MassWireOperation:
-						{
-							int X1 = BitConverter.ToInt16(e.Msg.readBuffer, e.Index);
-							int Y1 = BitConverter.ToInt16(e.Msg.readBuffer, e.Index + 2);
-							int X2 = BitConverter.ToInt16(e.Msg.readBuffer, e.Index + 4);
-							int Y2 = BitConverter.ToInt16(e.Msg.readBuffer, e.Index + 6);
-							byte toolMode = e.Msg.readBuffer[e.Index + 8];
-							//Modes Red=1, Green=2, Blue=4, Yellow=8, Actuator=16, Cutter=32
+					//case PacketTypes.MassWireOperation:
+					//	{
+					//		int X1 = BitConverter.ToInt16(e.Msg.readBuffer, e.Index);
+					//		int Y1 = BitConverter.ToInt16(e.Msg.readBuffer, e.Index + 2);
+					//		int X2 = BitConverter.ToInt16(e.Msg.readBuffer, e.Index + 4);
+					//		int Y2 = BitConverter.ToInt16(e.Msg.readBuffer, e.Index + 6);
+					//		byte toolMode = e.Msg.readBuffer[e.Index + 8];
+					//		//Modes Red=1, Green=2, Blue=4, Yellow=8, Actuator=16, Cutter=32
 
-							bool direction = Main.player[e.Msg.whoAmI].direction == 1;
-							TSPlayer ply = TShock.Players[e.Msg.whoAmI];
-							string logName = ply.User == null ? "unregistered" : ply.User.Name;
-							int minX = X1, maxX = X2, minY = Y1, maxY = Y2;
-							int drawX = direction ? minX : maxX;
-							int drawY = direction ? maxY : minY;
-							if (X2 < X1)
-							{
-								minX = X2;
-								maxX = X1;
-							}
-							if (Y2 < Y1)
-							{
-								minY = Y2;
-								maxY = Y1;
-							}
-							int wires = 0, acts = 0;
-							//We count our own wires since the client may only be able to place a few or even none.
-							if ((toolMode & 32) == 0)
-								countPlayerWires(Main.player[e.Msg.whoAmI], ref wires, ref acts);
+					//		bool direction = Main.player[e.Msg.whoAmI].direction == 1;
+					//		TSPlayer ply = TShock.Players[e.Msg.whoAmI];
+					//		string logName = ply.Account == null ? "unregistered" : ply.Account.Name;
+					//		int minX = X1, maxX = X2, minY = Y1, maxY = Y2;
+					//		int drawX = direction ? minX : maxX;
+					//		int drawY = direction ? maxY : minY;
+					//		if (X2 < X1)
+					//		{
+					//			minX = X2;
+					//			maxX = X1;
+					//		}
+					//		if (Y2 < Y1)
+					//		{
+					//			minY = Y2;
+					//			maxY = Y1;
+					//		}
+					//		int wires = 0, acts = 0;
+					//		//We count our own wires since the client may only be able to place a few or even none.
+					//		if ((toolMode & 32) == 0)
+					//			countPlayerWires(Main.player[e.Msg.whoAmI], ref wires, ref acts);
 
-							for (int starty = minY; starty <= maxY; starty++)
-							{
-								logAdvancedWire(drawX, starty, toolMode, logName, ref wires, ref acts);
-							}
-							for (int startx = minX; startx <= maxX; startx++)
-							{
-								if (startx == drawX)
-									continue;
-								logAdvancedWire(startx, drawY, toolMode, logName, ref wires, ref acts);
-							}
-						}
-						break;
+					//		for (int starty = minY; starty <= maxY; starty++)
+					//		{
+					//			logAdvancedWire(drawX, starty, toolMode, logName, ref wires, ref acts);
+					//		}
+					//		for (int startx = minX; startx <= maxX; startx++)
+					//		{
+					//			if (startx == drawX)
+					//				continue;
+					//			logAdvancedWire(startx, drawY, toolMode, logName, ref wires, ref acts);
+					//		}
+					//	}
+					//	break;
 				}
 			}
 		}
@@ -1588,17 +1611,17 @@ namespace History
 				//10 11
 				Queue(account, x, y, (byte)(delete ? 11 : 10));
 			}
-			if ((mode & 8) == 8 && Main.tile[x, y].wire4() == delete) // YELLOW
-			{
-				if (!delete)
-				{
-					if (wires <= 0)
-						return;
-					wires--;
-				}
-				//16 and 17
-				Queue(account, x, y, (byte)(delete ? 17 : 16));
-			}
+			//if ((mode & 8) == 8 && Main.tile[x, y].wire4() == delete) // YELLOW
+			//{
+			//	if (!delete)
+			//	{
+			//		if (wires <= 0)
+			//			return;
+			//		wires--;
+			//	}
+			//	//16 and 17
+			//	Queue(account, x, y, (byte)(delete ? 17 : 16));
+			//}
 			if ((mode & 16) == 16 && Main.tile[x, y].actuator() == delete) // ACTUATOR
 			{
 				if (!delete)
@@ -1613,11 +1636,11 @@ namespace History
 		}
 		void OnInitialize(EventArgs e)
 		{
-			TShockAPI.Commands.ChatCommands.Add(new Command("history.get", HistoryCmd, "history"));
-			TShockAPI.Commands.ChatCommands.Add(new Command("history.prune", Prune, "prunehist"));
-			TShockAPI.Commands.ChatCommands.Add(new Command("history.reenact", Reenact, "reenact"));
-			TShockAPI.Commands.ChatCommands.Add(new Command("history.rollback", Rollback, "rollback"));
-			TShockAPI.Commands.ChatCommands.Add(new Command("history.rollback", Undo, "rundo"));
+			TShockAPI.Commands.ChatCommands.Add(new Command("history.get", HistoryCmd, "history", "historico"));
+			TShockAPI.Commands.ChatCommands.Add(new Command("history.prune", Prune, "prunehist", "limparhistorico"));
+			TShockAPI.Commands.ChatCommands.Add(new Command("history.reenact", Reenact, "reenact", "livehistorico"));
+			TShockAPI.Commands.ChatCommands.Add(new Command("history.rollback", Rollback, "roolback", "desfazer"));
+			TShockAPI.Commands.ChatCommands.Add(new Command("history.rollback", Undo, "rundo", "refazer"));
 
 			switch (TShock.Config.StorageType.ToLower())
 			{
@@ -1691,7 +1714,7 @@ namespace History
 					}
 					catch (Exception ex)
 					{
-						command.Error("An error occurred. Check the logs for more details.");
+						command.Error("[History] An error occurred. Check the logs for more details.");
 						TShock.Log.ConsoleError(ex.ToString());
 					}
 				}
@@ -1708,21 +1731,21 @@ namespace History
 			{
 				if (e.Parameters.Count != 2 && e.Parameters.Count != 3)
 				{
-					e.Player.SendErrorMessage("Invalid syntax! Proper syntax: /history [account] [time] [radius]");
+					e.Player.SendErrorMessage("[History] Uso Correto: [c/ffd700:/historico (usuário) (tempo) (alcance)]");
 					return;
 				}
 				int radius = 10000;
 				int time;
 				if (!TShock.Utils.TryParseTime(e.Parameters[1], out time) || time <= 0)
-					e.Player.SendErrorMessage("Invalid time.");
+					e.Player.SendErrorMessage("[History] Tempo Inválido.");
 				else if (e.Parameters.Count == 3 && (!int.TryParse(e.Parameters[2], out radius) || radius <= 0))
-					e.Player.SendErrorMessage("Invalid radius.");
+					e.Player.SendErrorMessage("[History] Alcance Inválido.");
 				else
 					CommandQueue.Add(new InfoCommand(e.Parameters[0], time, radius, e.Player));
 			}
 			else
 			{
-				e.Player.SendMessage("Hit a block to get its history.", Color.LimeGreen);
+				e.Player.SendMessage("[History] Acerte um bloco para ver seu histórico de dados.", Color.LimeGreen);
 				AwaitingHistory[e.Player.Index] = true;
 			}
 		}
@@ -1730,18 +1753,18 @@ namespace History
 		{
 			if (e.Parameters.Count != 2 && e.Parameters.Count != 3)
 			{
-				e.Player.SendErrorMessage("Invalid syntax! Proper syntax: /reenact <account> <time> [radius]");
+				e.Player.SendErrorMessage("[History] Uso Correto: [c/ffd700:/livehistorico <usuário> <tempo> (alcance)]");
 				return;
 			}
 			int radius = 10000;
 			int time;
 			if (!TShock.Utils.TryParseTime(e.Parameters[1], out time) || time <= 0)
 			{
-				e.Player.SendErrorMessage("Invalid time.");
+				e.Player.SendErrorMessage("[History] Tempo Inválido.");
 			}
 			else if (e.Parameters.Count == 3 && (!int.TryParse(e.Parameters[2], out radius) || radius <= 0))
 			{
-				e.Player.SendErrorMessage("Invalid radius.");
+				e.Player.SendErrorMessage("[History] Alcance Inválido.");
 			}
 			else
 			{
@@ -1752,15 +1775,15 @@ namespace History
 		{
 			if (e.Parameters.Count != 2 && e.Parameters.Count != 3)
 			{
-				e.Player.SendErrorMessage("Invalid syntax! Proper syntax: /rollback <account> <time> [radius]");
+				e.Player.SendErrorMessage("[History] Uso Correto: [c/ffd700:/desfazer <usuário> <tempo> (alcance)]");
 				return;
 			}
 			int radius = 10000;
 			int time;
 			if (!TShock.Utils.TryParseTime(e.Parameters[1], out time) || time <= 0)
-				e.Player.SendErrorMessage("Invalid time.");
+				e.Player.SendErrorMessage("[History] Tempo Inválido.");
 			else if (e.Parameters.Count == 3 && (!int.TryParse(e.Parameters[2], out radius) || radius <= 0))
-				e.Player.SendErrorMessage("Invalid radius.");
+				e.Player.SendErrorMessage("[History] Alcance Inválido.");
 			else
 				CommandQueue.Add(new RollbackCommand(e.Parameters[0], time, radius, e.Player));
 		}
@@ -1768,21 +1791,21 @@ namespace History
 		{
 			if (e.Parameters.Count != 1)
 			{
-				e.Player.SendErrorMessage("Invalid syntax! Proper syntax: /prunehist <time>");
+				e.Player.SendErrorMessage("[History] Uso Correto: [c/ffd700:/limparhistorico <tempo>");
 				return;
 			}
 			int time;
 			if (TShock.Utils.TryParseTime(e.Parameters[0], out time) && time > 0)
 				CommandQueue.Add(new PruneCommand(time, e.Player));
 			else
-				e.Player.SendErrorMessage("Invalid time.");
+				e.Player.SendErrorMessage("[History] Tempo Inválido.");
 		}
 		void Undo(CommandArgs e)
 		{
 			if (UndoCommand.LastRollBack != null)
 				CommandQueue.Add(new UndoCommand(e.Player));
 			else
-				e.Player.SendErrorMessage("Nothing to undo!");
+				e.Player.SendErrorMessage("[History] Nada para desfazer!");
 		}
 	}
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Terraria;
+using Terraria.Utilities;
 using TShockAPI;
 using TShockAPI.DB;
 
@@ -67,9 +68,10 @@ namespace History.Commands
 			}
 			if (Main.rand == null)
 				Main.rand = new Random();
-			if (WorldGen.genRand == null)
-				WorldGen.genRand = new Random();
-
+			/*
+				  if (WorldGen.genRand == null)
+					  WorldGen.genRand = new Random();
+			*/
 			for (int i = 0; i >= 0 && i < History.Actions.Count; i++)
 			{
 				Action action = History.Actions[i];
@@ -97,7 +99,7 @@ namespace History.Commands
 				UndoCommand.LastWasReenact = true;
 			}
 			UndoCommand.LastRollBack = actions;
-			sender.SendInfoMessage("R{0} {1} action{2}.", reenact ? "eenacted" : "olled back", actions.Count, actions.Count == 1 ? "" : "s");
+			sender.SendInfoMessage("[History] {0} {1} aç{2}.", reenact ? "Refeito:" : "Desfeito:", actions.Count, actions.Count == 1 ? "ão" : "ões");
 		}
 	}
 }

@@ -35,7 +35,7 @@ namespace History.Commands
 			SaveCommand undo = new SaveCommand(LastRollBack.ToArray());
 			undo.Execute();
 
-			sender.SendSuccessMessage("Undo complete! {0} actions redone.", LastRollBack.Count);
+			sender.SendSuccessMessage("[History] {0} ações refeitas.", LastRollBack.Count);
 			LastRollBack = null;
 		}
 	}

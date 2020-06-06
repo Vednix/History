@@ -41,11 +41,11 @@ namespace History.Commands
 			}
 
 			actions.AddRange(History.Actions.Where(a => a.x == x && a.y == y));
-			sender.SendSuccessMessage("Tile history ({0}, {1}):", x, y);
+			sender.SendSuccessMessage("Histórico de Dados ({0}, {1}):", x, y);
 			foreach (Action a in actions)
 				sender.SendInfoMessage(a.ToString());
 			if (actions.Count == 0)
-				sender.SendErrorMessage("No history available.");
+				sender.SendErrorMessage("[History] Sem dados disponíveis.");
 		}
 	}
 }
